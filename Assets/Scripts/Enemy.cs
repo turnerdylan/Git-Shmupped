@@ -2,17 +2,22 @@
 
 public class Enemy : MonoBehaviour
 {
-    [Header("Set in the Unity Inspector")]
+    [Header("Enemy Specs")]
     public float speed = 10f;      // The speed in m/s
-    public float fireRate = 0.3f;  // Seconds/shot (Unused)
-    public float health = 10;
+    //public float fireRate = 0.3f;  // Seconds/shot (Unused)
+    public float health = 100;
     public int score = 100;      // Points earned for destroying this
+    int collisionDamage = 20;
+    Animator anim;
+    Hero hero;
 
     private BoundsCheck bndCheck;                                       // a
 
     void Awake()
     {                                                      // b
         bndCheck = GetComponent<BoundsCheck>();
+        anim = GetComponent<Animator>();
+        hero = FindObjectOfType<Hero>();
     }
 
     // This is a Property: A method that acts like a field
@@ -30,7 +35,9 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
+
         Move();
+        //transform.Rotate(new Vector3(0, 0, 2f));
 
         if (bndCheck != null && bndCheck.offDown)
         {                   // a
@@ -46,17 +53,47 @@ public class Enemy : MonoBehaviour
         tempPos.y -= speed * Time.deltaTime; pos = tempPos;
     }
 
-    void OnCollisionEnter(Collision coll)
+    void OnTriggerEnter(Collider coll)
     {
-        GameObject otherRootGO = coll.transform.root.gameObject;       // a
-        if (otherRootGO.tag == "ProjectileHero")
-        {                   // b
-            Destroy(otherRootGO);  // Destroy the Projectile
-            Destroy(gameObject);   // Destroy this Enemy GameObject
+        if (coll.tag == "ProjectileHero")
+        {
+            Destroy(coll.gameObject);  // Destroy the Projectile
+            //Destroy(gameObject);   // Destroy this Enemy GameObject
+            if (coll.gameObject.GetComponent<DamageDealer>())
+            {
+                //deal damage to enemy
+                int damage = coll.gameObject.GetComponent<DamageDealer>().damageValue;
+                TakeDamage(damage);
+            }
+        }
+        else if (coll.tag == "Hero")
+        {
+            hero.TakeDamage(collisionDamage);
+            Destroy(gameObject);
+        }
+        else if (coll.tag == "Bomb")
+        {
+            coll.gameObject.GetComponent<DamageDealer>();
+            int damage = coll.gameObject.GetComponent<DamageDealer>().damageValue;
+            TakeDamage(damage);
         }
         else
         {
-            print("Enemy hit by non-ProjectileHero: " + otherRootGO.name); // c
+            print("Enemy hit by non-ProjectileHero: " + coll.name);
         }
+
+        
+    }
+
+    public void TakeDamage(int dmg)
+    {
+        //do animaitons, damage, and potentially destroy
+        anim.SetTrigger("onHit");
+        health -= dmg;
+        if(health <= 0)
+        {
+            Destroy(gameObject);
+        }
+
     }
 }

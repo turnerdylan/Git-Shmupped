@@ -1,99 +1,93 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
+using System;
+using TMPro;
 
 public class Hero : MonoBehaviour
 {
-    static public Hero S; // Singleton                                    // a
+    static public Hero S;
+    Animator anim;
+    ShieldScript shield;
+    ScreenShake shake;
 
-    [Header("Set in the Unity Inspector")]
-    // These fields control the movement of the ship
+    [Header("Player specs")]
     public float speed = 30;
-    public float rollMult = -45;
-    public float pitchMult = 30;
-    public float gameRestartDelay = 2f;
-    public GameObject projectilePrefab;
-    public float projectileSpeed = 40;
+    public float playerHealth;
 
-    [Header("These fields are set dynamically")]
-    [SerializeField]
-    private float _shieldLevel = 1; // Remember to add the
-                                    // This variable holds a reference to the last triggering GameObject
-    private GameObject lastTriggerGo = null;                      // a
+    //public float gameRestartDelay = 2f;
+
+    [Header("UI mode controls")]
+    public TextMeshProUGUI tmp;
+    string[] modes = { "shield", "gun", "laser", "bomb" };
+    public int mode_tracker = 1;
+
+    private void Start()
+    {
+        shield = FindObjectOfType<ShieldScript>();
+        anim = GetComponent<Animator>();
+        shake = FindObjectOfType<ScreenShake>();
+        tmp.text = "bomb";
+    }
 
     void Awake()
     {
-        S = this;  // Set the Singleton                                        // a
+        S = this;
     }
 
     void Update()
     {
-        // Pull in information from the Input class
-        float xAxis = Input.GetAxis("Horizontal");                             // b
-        float yAxis = Input.GetAxis("Vertical");                               // b
-
-        // Change transform.position basec on the axes
+        //get input and move the player around
+        float xAxis = Input.GetAxis("Horizontal");
+        float yAxis = Input.GetAxis("Vertical");
         Vector3 pos = transform.position;
+        Debug.Log(speed);
         pos.x += xAxis * speed * Time.deltaTime;
         pos.y += yAxis * speed * Time.deltaTime;
         transform.position = pos;
 
-        // Rotate the ship to make it feel more dynamic                        // c
-        transform.rotation = Quaternion.Euler(yAxis * pitchMult, xAxis * rollMult, 0);
-
-        // Allow the ship to fire
-        if (Input.GetKeyDown(KeyCode.Space))
-        {                      // a
-            TempFire();
-        }
-    }
-
-    void TempFire()
-    {                                                   // b
-        GameObject projGO = Instantiate<GameObject>(projectilePrefab);
-        projGO.transform.position = transform.position;
-        Rigidbody rigidB = projGO.GetComponent<Rigidbody>();
-        rigidB.velocity = Vector3.up * projectileSpeed;
-    }
-
-    void OnTriggerEnter(Collider other)
-    {
-        Transform rootT = other.gameObject.transform.root;
-        GameObject go = rootT.gameObject;
-        //print("Triggered: "+go.name);                                 // b
-        // Make sure it's not the same triggering go as last time
-        if (go == lastTriggerGo)
-        {                                      // c
-            return;
-        }
-        lastTriggerGo = go;                                             // d
-
-        if (go.tag == "Enemy")
-        {  // If the shield was triggered by an enemy
-            shieldLevel--;        // Decrease the level of the shield by 1
-            Destroy(go);          // ... and Destroy the enemy            // e
+        //do player animations
+        if (Input.GetKey(KeyCode.A))
+        {
+            anim.SetBool("isLeft", true);
         }
         else
         {
-            print("Triggered by non-Enemy:" + go.name);                  // f
+            anim.SetBool("isLeft", false);
+        }
+        if (Input.GetKey(KeyCode.D))
+        {
+            anim.SetBool("isRight", true);
+        }
+        else
+        {
+            anim.SetBool("isRight", false);
+        }
+
+        //change modes of the ship
+        if (Input.GetKeyDown("e"))
+        {
+            tmp.text = modes[mode_tracker];
+            if (mode_tracker == 3)
+            {
+                mode_tracker = 0;
+            }
+            else
+            {
+                mode_tracker++;
+            }
+            //Debug.Log(mode_tracker);
         }
     }
 
-    public float shieldLevel
+    public void TakeDamage(int damage)
     {
-        get
+        anim.SetTrigger("isHit");
+        playerHealth -= damage;
+        shake.TriggerShake();
+        if(playerHealth <= 0)
         {
-            return (_shieldLevel);                                     // a
-        }
-        set
-        {
-            _shieldLevel = Mathf.Min(value, 4);                       // b
-            // If the shield is going to be set to less than zero
-            if (value < 0)
-            {                                            // c
-                Destroy(this.gameObject);
-                // Tell Main.S to restart the game after a delay
-                Main.S.DelayedRestart(gameRestartDelay);
-            }
+            Destroy(gameObject);
         }
     }
 }

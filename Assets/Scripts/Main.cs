@@ -29,7 +29,7 @@ public class Main : MonoBehaviour
     {
         // Pick a random Enemy prefab to instantiate
         int ndx = Random.Range(0, prefabEnemies.Length);                // b
-        GameObject go = Instantiate<GameObject>(prefabEnemies[ndx]);// c
+        GameObject go = Instantiate(prefabEnemies[ndx]) as GameObject;// c
 
         // Position the Enemy above the screen with a random x position
         float enemyPadding = enemyDefaultPadding;                       // d
